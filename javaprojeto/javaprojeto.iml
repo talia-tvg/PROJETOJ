@@ -1,0 +1,93 @@
+Desenvolvimento do módulo Java
+
+Este programa é para simular a leitura de dados de sensores, como se fossem de um Arduino real.
+Principais Elementos
+•	Tarefas Paralelas:
+Utilizei um executor para rodar uma tarefa paralela, simulando a geração contínua dos dados dos sensores.
+•	Geração de Dados:
+   Dentro da tarefa, usei a classe Random para criar valores aleatórios:
+Temperatura: Entre 20°C e 35°C.
+Umidade: De 0% a 100%.
+Luminosidade: De 0 a 1000 lux.
+Intervalo de Leitura:
+Um atraso de 0,5 segundos é incluído para simular o tempo entre as leituras dos sensores.
+Visualização:
+Os dados são exibidos no console a cada ciclo, oferecendo uma visão clara das leituras simuladas.
+Gestão de Erros:
+O código cuida das interrupções, para que qualquer problema seja rapidamente detectado e resolvido.
+•	Encerramento Suave:
+Incluí um mecanismo para garantir que todos os recursos sejam liberados corretamente ao finalizar o programa.
+                     Esse simulador é ótimo para testar e ajustar a lógica de processamento de dados sem precisar de hardware real, ajudando a identificar e corrigir problemas antes de integrar com dispositivos físicos.
+
+
+•	Segue o código abaixo
+
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class SimuladorArduino {
+
+    // Limites de operação
+    private static final float LIMITE_TEMPERATURA = 40.0f; // Limite para alerta de temperatura
+    private static final int VALOR_MINIMO_UMIDADE = 300;   // Valor mínimo para simulação de umidade
+    private static final int VALOR_MAXIMO_UMIDADE = 700;   // Valor máximo para simulação de umidade
+
+    public static void main(String[] args) {
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+
+        // Simulador de dados do Arduino
+        executor.execute(() -> {
+            Random random = new Random();
+            while (true) {
+                try {
+                    // Simular dados
+                    float temperatura = 20 + random.nextFloat() * 15; // Temperatura entre 20°C e 35°C
+                    int leituraUmidade = VALOR_MINIMO_UMIDADE + random.nextInt(VALOR_MAXIMO_UMIDADE - VALOR_MINIMO_UMIDADE + 1); // Simular leitura analógica de umidade
+                    int leituraLuminosidade = random.nextInt(1024); // Simular leitura analógica de luminosidade
+
+                    // Conversão da umidade para porcentagem
+                    int umidade = (int) map(leituraUmidade, VALOR_MINIMO_UMIDADE, VALOR_MAXIMO_UMIDADE, 0, 100);
+                    umidade = constrain(umidade, 0, 100);
+
+                    // Conversão da luminosidade para lux
+                    float luminosidadeLux = (1023.0f - leituraLuminosidade) * (500.0f / 1023.0f);
+
+                    // Simular atraso de leitura
+                    Thread.sleep(500); // Atraso de 0,5 segundos para simular comportamento do Arduino
+
+                    // Exibir dados simulados no console
+                    System.out.printf("Temperatura: %.1f °C\n", temperatura);
+                    System.out.println("Umidade: " + umidade + " %");
+                    System.out.printf("Luminosidade: %.0f lux\n", luminosidadeLux);
+
+                    // Simular comportamento do LED de alerta
+                    if (temperatura > LIMITE_TEMPERATURA) {
+                        System.out.println("LED ALERTA: ACESO");
+                    } else {
+                        System.out.println("LED ALERTA: APAGADO");
+                    }
+
+                    System.out.println("----------------------------");
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        // Fechar executor ao encerrar
+        Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
+    }
+
+    // Função para mapear valores (similar ao map() do Arduino)
+    private static float map(float valor, float entradaMin, float entradaMax, float saidaMin, float saidaMax) {
+        return ((valor - entradaMin) / (entradaMax - entradaMin)) * (saidaMax - saidaMin) + saidaMin;
+    }
+
+    // Função para limitar valores (similar ao constrain() do Arduino)
+    private static int constrain(int valor, int min, int max) {
+        return Math.max(min, Math.min(max, valor));
+    }
+}
+
